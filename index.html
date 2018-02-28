@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR-Viking</title>
+
+  <script src="https://aframe.io/releases/0.7.1/aframe.min.js"></script>
+  <script src="https://cdn.rawgit.com/donmccurdy/aframe-extras/cfe5f316/dist/aframe-extras.js"></script>
+  <script src="https://rawgit.com/chenzlabs/three.ar.js/0f645a5/dist/three.ar.min.js"></script>
+  <script src="https://rawgit.com/chenzlabs/aframe-ar/0cf8d5a/dist/aframe-ar.min.js"></script>
+  <script>
+    AFRAME.registerComponent('shadow-material', {
+      init: function () {
+        this.material = this.el.getOrCreateObject3D('mesh').material = new THREE.ShadowMaterial();
+        this.material.opacity = 0.3;
+      }
+    });
+  </script>
+  <!-- Prevent touch causing flicker on iOS. -->
+  <style>
+    * {
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+  </style>
+</head>
+
+<body>
+  <a-scene ar>
+    <a-camera user-height="0" cursor="fuse:false" ar-raycaster raycaster="objects:none"></a-camera>
+    <a-entity id="walker" visible="false">
+      <a-entity id="model" gltf-model="model/viking.gltf" scale="0.003 0.003 0.003" animation-mixer shadow="cast:true"></a-entity>
+      <a-plane width="0.5" height="0.5" position="0 0 0" rotation="-90 0 0" color="white" shadow="receive: true" shadow-material></a-plane>
+    </a-entity>
+    <a-ring id="intersection" visible="false" color="red" radius-inner="0.02" radius-outer="0.03" rotation="-90 0 0"></a-ring>
+  </a-scene>
+
+  <script>
+    let scene = document.querySelector('a-scene');
+    let walker;
+    let walkerModel;
+    let idleAnimation;
+    let sitting = false;
+
+    function activateViking() {
+      walker = document.querySelector('#walker');
+      walkerModel = document.querySelector('#model');
+      idleAnimation = 'Idle';
+      walkAnimation = 'Run';
+    }
+
+    function onceSceneLoaded() {
+      let raycaster = document.querySelector('[ar-raycaster]');
+      let marker = document.querySelector('#intersection');
+      activateViking();
+      raycaster.addEventListener('raycaster-intersection', function (event) {
+        const intersection = event.detail.intersections[0];
+        if (intersection) {
+          marker.setAttribute('position', intersection.point);
+          marker.setAttribute('visible', true);
+          marker.setAttribute('color', 'green');
+        }
+      });
+      raycaster.addEventListener('raycaster-intersection-cleared', function (event) {
+        marker.setAttribute('color', 'red');
+      });
+      const { stringify } = AFRAME.utils.coordinates;
+      let lastEvent = null;
+      raycaster.addEventListener('click', function () {
+        const currentEvent = new Date().getTime();
+        if (lastEvent && (currentEvent - lastEvent < 1000)) {
+          return;
+        }
+        lastEvent = currentEvent;
+        const targetPosition = raycaster.components.cursor.intersection.point;
+        if (!walker.getAttribute('visible')) {
+          walker.setAttribute('visible', true);
+          walker.setAttribute('position', stringify(targetPosition));
+        } else {
+          const currentPosition = walker.object3D.position;
+          const distance = currentPosition.distanceTo(targetPosition);
+          walker.object3D.lookAt(targetPosition);
+          walkerModel.setAttribute('animation-mixer', { clip: walkAnimation });
+          const animation = document.createElement('a-animation');
+          animation.setAttribute('attribute', 'position');
+          animation.setAttribute('to', stringify(targetPosition));
+          animation.setAttribute('dur', distance * 3000);
+          animation.setAttribute('easing', 'linear');
+          animation.addEventListener('animationend',
+            () => walkerModel.setAttribute('animation-mixer', { clip: idleAnimation }));
+          marker.setAttribute('color', 'blue');
+          setTimeout(() => marker.setAttribute('color', 'green'), 350);
+          walker.appendChild(animation);
+        }
+      });
+    }
+
+    scene.addEventListener('loaded', onceSceneLoaded);
+  </script>
+</body>
+
+</html>
