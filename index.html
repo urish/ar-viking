@@ -81,14 +81,14 @@
           const currentPosition = walker.object3D.position;
           const distance = currentPosition.distanceTo(targetPosition);
           walker.object3D.lookAt(targetPosition);
-          walkerModel.setAttribute('animation-mixer', { clip: walkAnimation });
+         // walkerModel.setAttribute('animation-mixer', { clip: walkAnimation });
           const animation = document.createElement('a-animation');
           animation.setAttribute('attribute', 'position');
           animation.setAttribute('to', stringify(targetPosition));
           animation.setAttribute('dur', distance * 3000);
           animation.setAttribute('easing', 'linear');
-          animation.addEventListener('animationend',
-            () => walkerModel.setAttribute('animation-mixer', { clip: idleAnimation }));
+          //animation.addEventListener('animationend',
+          //  () => walkerModel.setAttribute('animation-mixer', { clip: idleAnimation }));
           marker.setAttribute('color', 'blue');
           setTimeout(() => marker.setAttribute('color', 'green'), 350);
           walker.appendChild(animation);
